@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tldraw Clone with Speech-to-Text</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* General styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Toolbar styling */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background-color: #f0f4f8;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .toolbar button {
+      padding: 10px;
+      font-size: 14px;
+      color: white;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .toolbar button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Canvas container */
+    .canvas-container {
+      margin: 20px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      display: block;
+      background-color: #fff;
+    }
+
+    .color-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .color-toolbar label {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar for Whiteboard -->
+  <div class="toolbar">
+    <button id="selectTool">Select</button>
+    <button id="drawTool">Draw</button>
+    <button id="clearCanvas">Clear</button>
+    <button id="start-btn">Start Listening</button>
+  </div>
+
+  <!-- Canvas and Tools -->
+  <div class="canvas-container">
+    <canvas id="drawingCanvas"></canvas>
+    <div class="color-toolbar">
+      <input type="color" id="colorPicker" value="#000000">
+      <label for="strokeWidth">Size</label>
+      <input type="range" id="strokeWidth" min="1" max="10" value="3">
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Canvas setup
+    const canvas = document.getElementById("drawingCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth - 50;
+    canvas.height = window.innerHeight - 150;
+
+    // Toolbar elements
+    const tools = {
+      select: document.getElementById("selectTool"),
+      draw: document.getElementById("drawTool"),
+    };
+    const colorPicker = document.getElementById("colorPicker");
+    const strokeWidth = document.getElementById("strokeWidth");
+    const clearCanvas = document.getElementById("clearCanvas");
+
+    // State management
+    let currentTool = "select";
+    let isDrawing = false;
+    let startX = 0;
+    let startY = 0;
+
+    // Tool selection
+    Object.values(tools).forEach((tool) => {
+      tool.addEventListener("click", () => {
+        Object.values(tools).forEach((t) => t.classList.remove("active"));
+        tool.classList.add("active");
+        currentTool = tool.id.replace("Tool", "").toLowerCase();
+      });
+    });
+
+    // Clear canvas
+    clearCanvas.addEventListener("click", () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Drawing events
+    canvas.addEventListener("mousedown", (e) => {
+      isDrawing = true;
+      startX = e.offsetX;
+      startY = e.offsetY;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!isDrawing) return;
+
+      if (currentTool === "draw") {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.strokeStyle = colorPicker.value;
+        ctx.lineWidth = strokeWidth.value;
+        ctx.stroke();
+        startX = e.offsetX;
+        startY = e.offsetY;
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      isDrawing = false;
+      ctx.beginPath();
+    });
+
+    // Speech-to-text functionality
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const startButton = document.getElementById("start-btn");
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      startButton.addEventListener("click", () => {
+        recognition.start();
+      });
+
+      recognition.addEventListener("result", (event) => {
+        const transcript = event.results[0][0].transcript;
+        drawTextOnCanvas(transcript);
+      });
+
+      recognition.addEventListener("speechend", () => {
+        recognition.stop();
+      });
+
+      recognition.addEventListener("error", (event) => {
+        console.error("Speech Recognition Error: ", event.error);
+      });
+    } else {
+      alert("Sorry, Speech Recognition is not supported in your browser.");
+    }
+
+    function drawTextOnCanvas(text) {
+      ctx.font = "20px Arial";
+      ctx.fillStyle = colorPicker.value;
+      ctx.fillText(text, 50, 50); // Text appears at (50, 50)
+    }
+  </script>
+</body>
+</html>
